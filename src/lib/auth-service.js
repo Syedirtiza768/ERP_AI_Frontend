@@ -18,7 +18,21 @@ class AuthService {
   }
 
   async logout() {
-    return httpClient.post("/auth/logout");
+    try {
+      // First try to call the backend logout endpoint if it exists
+      await httpClient.post("/auth/logout").catch(() => {
+        // Ignore backend errors during logout
+        console.log(
+          "Backend logout failed, continuing with client-side logout"
+        );
+      });
+
+      // Return true to indicate success
+      return true;
+    } catch (error) {
+      console.error("Logout failed:", error);
+      return false;
+    }
   }
 
   async checkPermissions(permissions) {
