@@ -11,7 +11,6 @@ export const authOptions = {
       },
       async authorize(credentials) {
         try {
-          // Call your backend login API
           const response = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
             {
@@ -24,7 +23,6 @@ export const authOptions = {
           const data = await response.json();
 
           if (response.ok && data.access_token) {
-            // Return a user object that will be stored in the JWT token
             return {
               id: data.user.id,
               name: data.user.username,
@@ -43,7 +41,6 @@ export const authOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // Initial sign in
       if (user) {
         token.id = user.id;
         token.accessToken = user.accessToken;
@@ -52,7 +49,6 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      // Send properties to the client
       session.user.id = token.id;
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
@@ -62,6 +58,10 @@ export const authOptions = {
   pages: {
     signIn: "/login",
   },
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
-export default NextAuth(authOptions);
+const handler = NextAuth(authOptions);
+
+// ✅ Required for App Router
+export { handler as GET, handler as POST };
