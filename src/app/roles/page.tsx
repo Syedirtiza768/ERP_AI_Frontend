@@ -1,42 +1,42 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/ui/data-table"
-import { api } from "@/lib/api-service"
-import { Plus, Pencil } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { PageHeader } from "@/components/ui/page-header"
-import { useToast } from "@/components/ui/toast-context"
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
-import { Spinner } from "@/components/ui/spinner"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
+import { roleService } from "@/lib";
+import { Plus, Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { useToast } from "@/components/ui/toast-context";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Role {
-  id: string
-  name: string
-  description: string
-  permissionCount: number
-  userCount: number
+  id: string;
+  name: string;
+  description: string;
+  permissionCount: number;
+  userCount: number;
 }
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<Role[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const fetchRoles = async () => {
     try {
-      const data = await api.get<Role[]>("/roles")
-      setRoles(data)
+      const data = await roleService.getAll();
+      setRoles(data);
     } catch (error) {
-      console.error("Failed to fetch roles:", error)
+      console.error("Failed to fetch roles:", error);
       toast({
         title: "Error",
         description: "Failed to load roles",
         variant: "destructive",
-      })
+      });
       // For demo purposes, set some sample data
       setRoles([
         {
@@ -60,35 +60,35 @@ export default function RolesPage() {
           permissionCount: 4,
           userCount: 12,
         },
-      ])
+      ]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchRoles()
-  }, [])
+    fetchRoles();
+  }, []);
 
   const handleDeleteRole = async (roleId: string) => {
     try {
-      await api.delete(`/roles/${roleId}`)
+      await roleService.delete(roleId);
       toast({
         title: "Role deleted",
         description: "The role has been deleted successfully.",
         variant: "success",
-      })
+      });
       // Refresh the role list
-      fetchRoles()
+      fetchRoles();
     } catch (error) {
-      console.error("Failed to delete role:", error)
+      console.error("Failed to delete role:", error);
       toast({
         title: "Error",
         description: "Failed to delete role",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const columns = [
     {
@@ -102,12 +102,16 @@ export default function RolesPage() {
     {
       key: "permissionCount",
       title: "Permissions",
-      render: (role: Role) => <Badge variant="secondary">{role.permissionCount}</Badge>,
+      render: (role: Role) => (
+        <Badge variant="secondary">{role.permissionCount}</Badge>
+      ),
     },
     {
       key: "userCount",
       title: "Users",
-      render: (role: Role) => <Badge variant="secondary">{role.userCount}</Badge>,
+      render: (role: Role) => (
+        <Badge variant="secondary">{role.userCount}</Badge>
+      ),
     },
     {
       key: "actions",
@@ -118,8 +122,8 @@ export default function RolesPage() {
             variant="ghost"
             size="icon"
             onClick={(e) => {
-              e.stopPropagation()
-              router.push(`/roles/edit/${role.id}`)
+              e.stopPropagation();
+              router.push(`/roles/edit/${role.id}`);
             }}
           >
             <Pencil className="h-4 w-4" />
@@ -136,7 +140,7 @@ export default function RolesPage() {
         </div>
       ),
     },
-  ]
+  ];
 
   return (
     <div className="space-y-6">
@@ -164,5 +168,5 @@ export default function RolesPage() {
         />
       )}
     </div>
-  )
+  );
 }

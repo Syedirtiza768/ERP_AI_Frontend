@@ -1,122 +1,142 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { api } from "@/lib/api-service"
-import { Badge } from "@/components/ui/badge"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { roleService, permissionService } from "@/lib";
+import { Badge } from "@/components/ui/badge";
 
 interface Permission {
-  id: string
-  name: string
-  resource: string
-  action: string
+  id: string;
+  name: string;
+  resource: string;
+  action: string;
 }
 
 interface Role {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
-export default function AssignPermissionsPage({ params }: { params: { id: string } }) {
-  const [role, setRole] = useState<Role | null>(null)
-  const [permissions, setPermissions] = useState<Permission[]>([])
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const router = useRouter()
-  const { id } = params
+export default function AssignPermissionsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const [role, setRole] = useState<Role | null>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
+  const { id } = params;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [roleData, permissionsData, rolePermissionsData] = await Promise.all([
-          api.get<Role>(`/roles/${id}`),
-          api.get<Permission[]>("/permissions"),
-          api.get<{ permissionId: string }[]>(`/roles/${id}/permissions`),
-        ])
-        setRole(roleData)
-        setPermissions(permissionsData)
-        setSelectedPermissions(rolePermissionsData.map((rp) => rp.permissionId))
+        const [roleData, permissionsData, rolePermissionsData] =
+          await Promise.all([
+            roleService.getById(id),
+            permissionService.getAll(),
+            roleService.getPermissions(id),
+          ]);
+        setRole(roleData);
+        setPermissions(permissionsData);
+        setSelectedPermissions(
+          rolePermissionsData.map((rp) => rp.permissionId)
+        );
       } catch (error) {
-        console.error("Failed to fetch data:", error)
-        setError("Failed to load data")
+        console.error("Failed to fetch data:", error);
+        setError("Failed to load data");
         // For demo purposes
         setRole({
           id,
           name: "Admin",
-        })
+        });
         setPermissions([
           { id: "1", name: "Create User", resource: "users", action: "create" },
           { id: "2", name: "Edit User", resource: "users", action: "update" },
           { id: "3", name: "Delete User", resource: "users", action: "delete" },
           { id: "4", name: "View Roles", resource: "roles", action: "read" },
-        ])
-        setSelectedPermissions(["1", "2"])
+        ]);
+        setSelectedPermissions(["1", "2"]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [id])
+    fetchData();
+  }, [id]);
 
   const handlePermissionToggle = (permissionId: string) => {
     setSelectedPermissions((prev) =>
-      prev.includes(permissionId) ? prev.filter((id) => id !== permissionId) : [...prev, permissionId],
-    )
-  }
+      prev.includes(permissionId)
+        ? prev.filter((id) => id !== permissionId)
+        : [...prev, permissionId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsSaving(true)
+    e.preventDefault();
+    setError(null);
+    setIsSaving(true);
 
     try {
-      await api.post("/role-permissions", {
-        roleId: id,
-        permissionIds: selectedPermissions,
-      })
-      router.push(`/roles/${id}`)
+      await roleService.assignPermissions(id, selectedPermissions);
+      router.push(`/roles/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to assign permissions")
+      setError(
+        err instanceof Error ? err.message : "Failed to assign permissions"
+      );
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   if (isLoading) {
-    return <div>Loading data...</div>
+    return <div>Loading data...</div>;
   }
 
   // Group permissions by resource
-  const groupedPermissions: Record<string, Permission[]> = {}
+  const groupedPermissions: Record<string, Permission[]> = {};
   permissions.forEach((permission) => {
     if (!groupedPermissions[permission.resource]) {
-      groupedPermissions[permission.resource] = []
+      groupedPermissions[permission.resource] = [];
     }
-    groupedPermissions[permission.resource].push(permission)
-  })
+    groupedPermissions[permission.resource].push(permission);
+  });
 
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Assign Permissions</h1>
-        <p className="text-muted-foreground">Assign permissions to role: {role?.name}</p>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Assign Permissions
+        </h1>
+        <p className="text-muted-foreground">
+          Assign permissions to role: {role?.name}
+        </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Permission Assignment</CardTitle>
-          <CardDescription>Select permissions to assign to this role</CardDescription>
+          <CardDescription>
+            Select permissions to assign to this role
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -135,11 +155,16 @@ export default function AssignPermissionsPage({ params }: { params: { id: string
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {perms.map((permission) => (
-                    <div key={permission.id} className="flex items-center space-x-2 rounded-md border p-3">
+                    <div
+                      key={permission.id}
+                      className="flex items-center space-x-2 rounded-md border p-3"
+                    >
                       <Checkbox
                         id={permission.id}
                         checked={selectedPermissions.includes(permission.id)}
-                        onCheckedChange={() => handlePermissionToggle(permission.id)}
+                        onCheckedChange={() =>
+                          handlePermissionToggle(permission.id)
+                        }
                       />
                       <div className="grid gap-1">
                         <Label
@@ -148,7 +173,9 @@ export default function AssignPermissionsPage({ params }: { params: { id: string
                         >
                           {permission.name}
                         </Label>
-                        <p className="text-sm text-muted-foreground">{permission.action}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {permission.action}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -156,7 +183,12 @@ export default function AssignPermissionsPage({ params }: { params: { id: string
               </div>
             ))}
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSaving}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isSaving}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isSaving}>
@@ -167,5 +199,5 @@ export default function AssignPermissionsPage({ params }: { params: { id: string
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

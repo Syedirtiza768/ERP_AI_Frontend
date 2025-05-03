@@ -1,24 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { api } from "@/lib/api-service"
-import { PageHeader } from "@/components/ui/page-header"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { type RoleFormValues, roleFormSchema } from "@/lib/form-schema"
-import { useToast } from "@/components/ui/toast-context"
-import { Spinner } from "@/components/ui/spinner"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { roleService } from "@/lib";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { type RoleFormValues, roleFormSchema } from "@/lib/form-schema";
+import { useToast } from "@/components/ui/toast-context";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function CreateRolePage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleFormSchema),
@@ -26,33 +39,37 @@ export default function CreateRolePage() {
       name: "",
       description: "",
     },
-  })
+  });
 
   const onSubmit = async (data: RoleFormValues) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await api.post("/roles", data)
+      await roleService.create(data);
       toast({
         title: "Role created",
         description: "The role has been created successfully.",
         variant: "success",
-      })
-      router.push("/roles")
+      });
+      router.push("/roles");
     } catch (error) {
-      console.error("Failed to create role:", error)
+      console.error("Failed to create role:", error);
       toast({
         title: "Error",
         description: "Failed to create role. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Create Role" description="Add a new role to the system" backButton />
+      <PageHeader
+        title="Create Role"
+        description="Add a new role to the system"
+        backButton
+      />
 
       <Card className="mx-auto max-w-2xl">
         <CardHeader>
@@ -89,7 +106,12 @@ export default function CreateRolePage() {
                 )}
               />
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={isLoading}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
@@ -102,5 +124,5 @@ export default function CreateRolePage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

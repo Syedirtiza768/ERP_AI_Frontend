@@ -1,35 +1,35 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/ui/data-table"
-import { api } from "@/lib/api-service"
-import { Plus, Pencil } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { format } from "date-fns"
-import { PageHeader } from "@/components/ui/page-header"
-import { useToast } from "@/components/ui/toast-context"
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
-import { Spinner } from "@/components/ui/spinner"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
+import { userService } from "@/lib";
+import { Plus, Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { PageHeader } from "@/components/ui/page-header";
+import { useToast } from "@/components/ui/toast-context";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const fetchUsers = async () => {
     try {
-      const data = await api.get("/users")
-      setUsers(data)
+      const data = await userService.getAll();
+      setUsers(data);
     } catch (error) {
-      console.error("Failed to fetch users:", error)
+      console.error("Failed to fetch users:", error);
       toast({
         title: "Error",
         description: "Failed to load users",
         variant: "destructive",
-      })
+      });
       // For demo purposes, set some sample data
       setUsers([
         {
@@ -56,35 +56,35 @@ export default function UsersPage() {
           createdAt: new Date().toISOString(),
           roles: ["Viewer"],
         },
-      ])
+      ]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    fetchUsers();
+  }, []);
 
   const handleDeleteUser = async (userId) => {
     try {
-      await api.delete(`/users/${userId}`)
+      await userService.delete(userId);
       toast({
         title: "User deleted",
         description: "The user has been deleted successfully.",
         variant: "success",
-      })
+      });
       // Refresh the user list
-      fetchUsers()
+      fetchUsers();
     } catch (error) {
-      console.error("Failed to delete user:", error)
+      console.error("Failed to delete user:", error);
       toast({
         title: "Error",
         description: "Failed to delete user",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const columns = [
     {
@@ -112,7 +112,9 @@ export default function UsersPage() {
       key: "isActive",
       title: "Status",
       render: (user) => (
-        <Badge variant={user.isActive ? "success" : "destructive"}>{user.isActive ? "Active" : "Inactive"}</Badge>
+        <Badge variant={user.isActive ? "success" : "destructive"}>
+          {user.isActive ? "Active" : "Inactive"}
+        </Badge>
       ),
     },
     {
@@ -129,8 +131,8 @@ export default function UsersPage() {
             variant="ghost"
             size="icon"
             onClick={(e) => {
-              e.stopPropagation()
-              router.push(`/users/edit/${user.id}`)
+              e.stopPropagation();
+              router.push(`/users/edit/${user.id}`);
             }}
           >
             <Pencil className="h-4 w-4" />
@@ -147,7 +149,7 @@ export default function UsersPage() {
         </div>
       ),
     },
-  ]
+  ];
 
   return (
     <div className="space-y-6">
@@ -175,5 +177,5 @@ export default function UsersPage() {
         />
       )}
     </div>
-  )
+  );
 }

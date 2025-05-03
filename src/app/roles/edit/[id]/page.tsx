@@ -1,26 +1,39 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { api } from "@/lib/api-service"
-import { PageHeader } from "@/components/ui/page-header"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { type RoleFormValues, roleFormSchema } from "@/lib/form-schema"
-import { useToast } from "@/components/ui/toast-context"
-import { Spinner } from "@/components/ui/spinner"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { roleService } from "@/lib";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { type RoleFormValues, roleFormSchema } from "@/lib/form-schema";
+import { useToast } from "@/components/ui/toast-context";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function EditRolePage({ params }: { params: { id: string } }) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
-  const { id } = params
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+  const { id } = params;
 
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleFormSchema),
@@ -28,64 +41,68 @@ export default function EditRolePage({ params }: { params: { id: string } }) {
       name: "",
       description: "",
     },
-  })
+  });
 
   useEffect(() => {
     const fetchRole = async () => {
       try {
-        const role = await api.get(`/roles/${id}`)
+        const role = await roleService.getById(id);
         form.reset({
           name: role.name,
           description: role.description,
-        })
+        });
       } catch (error) {
-        console.error("Failed to fetch role:", error)
+        console.error("Failed to fetch role:", error);
         toast({
           title: "Error",
           description: "Failed to load role data",
           variant: "destructive",
-        })
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchRole()
-  }, [id, form, toast])
+    fetchRole();
+  }, [id, form, toast]);
 
   const onSubmit = async (data: RoleFormValues) => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
-      await api.patch(`/roles/${id}`, data)
+      await roleService.update(id, data);
       toast({
         title: "Role updated",
         description: "The role has been updated successfully.",
         variant: "success",
-      })
-      router.push("/roles")
+      });
+      router.push("/roles");
     } catch (error) {
-      console.error("Failed to update role:", error)
+      console.error("Failed to update role:", error);
       toast({
         title: "Error",
         description: "Failed to update role. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
       <div className="flex h-40 items-center justify-center">
         <Spinner size="lg" />
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Edit Role" description="Update role information" backButton />
+      <PageHeader
+        title="Edit Role"
+        description="Update role information"
+        backButton
+      />
 
       <Card className="mx-auto max-w-2xl">
         <CardHeader>
@@ -122,7 +139,12 @@ export default function EditRolePage({ params }: { params: { id: string } }) {
                 )}
               />
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSaving}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={isSaving}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSaving}>
@@ -135,5 +157,5 @@ export default function EditRolePage({ params }: { params: { id: string } }) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

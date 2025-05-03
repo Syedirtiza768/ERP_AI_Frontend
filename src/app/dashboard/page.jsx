@@ -1,4 +1,3 @@
-// src/app/dashboard/page.jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,7 +8,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { api } from "@/lib/api-service";
+import {
+  userService,
+  roleService,
+  permissionService,
+  auditService,
+} from "@/lib";
 import { Users, ShieldCheck, Key, ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Spinner } from "@/components/ui/spinner";
@@ -35,25 +39,25 @@ export default function DashboardPage() {
         let auditLogCount = { count: 0 };
 
         try {
-          userCount = await api.get("/users/count");
+          userCount = await userService.getCount();
         } catch (error) {
           console.error("Failed to fetch user count:", error);
         }
 
         try {
-          roleCount = await api.get("/roles/count");
+          roleCount = await roleService.getCount();
         } catch (error) {
           console.error("Failed to fetch role count:", error);
         }
 
         try {
-          permissionCount = await api.get("/permissions/count");
+          permissionCount = await permissionService.getCount();
         } catch (error) {
           console.error("Failed to fetch permission count:", error);
         }
 
         try {
-          auditLogCount = await api.get("/audit-logs/count");
+          auditLogCount = await auditService.getCount();
         } catch (error) {
           console.error("Failed to fetch audit log count:", error);
         }

@@ -1,23 +1,36 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { api } from "@/lib/api-service"
-import { PageHeader } from "@/components/ui/page-header"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { userFormSchema } from "@/lib/form-schema"
-import { useToast } from "@/components/ui/toast-context"
-import { Spinner } from "@/components/ui/spinner"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { userService } from "@/lib";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { userFormSchema } from "@/lib/form-schema";
+import { useToast } from "@/components/ui/toast-context";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function CreateUserPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm({
     resolver: zodResolver(userFormSchema),
@@ -27,38 +40,44 @@ export default function CreateUserPage() {
       password: "",
       isActive: true,
     },
-  })
+  });
 
   const onSubmit = async (data) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await api.post("/users", data)
+      await userService.create(data);
       toast({
         title: "User created",
         description: "The user has been created successfully.",
         variant: "success",
-      })
-      router.push("/users")
+      });
+      router.push("/users");
     } catch (error) {
-      console.error("Failed to create user:", error)
+      console.error("Failed to create user:", error);
       toast({
         title: "Error",
         description: "Failed to create user. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Create User" description="Add a new user to the system" backButton />
+      <PageHeader
+        title="Create User"
+        description="Add a new user to the system"
+        backButton
+      />
 
       <Card className="mx-auto max-w-2xl">
         <CardHeader>
           <CardTitle>User Information</CardTitle>
-          <CardDescription>Enter the details for the new user account</CardDescription>
+          <CardDescription>
+            Enter the details for the new user account
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -103,7 +122,12 @@ export default function CreateUserPage() {
                 )}
               />
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={isLoading}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
@@ -116,5 +140,5 @@ export default function CreateUserPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
