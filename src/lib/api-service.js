@@ -3,8 +3,6 @@ import { getSession } from "next-auth/react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 class ApiService {
-  // lib/api-service.js - Update the fetchWithAuth method
-
   async fetchWithAuth(endpoint, options = {}) {
     const session = await getSession();
 

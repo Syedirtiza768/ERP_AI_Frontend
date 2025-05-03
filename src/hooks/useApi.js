@@ -1,16 +1,15 @@
-// hooks/useApi.js
-
+// src/hooks/useApi.js
 import { useSession } from "next-auth/react";
 import { api } from "@/lib/api-service";
 import { useState } from "react";
 
 export function useApi() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const callApi = async (apiMethod, ...args) => {
-    if (!session) {
+    if (status !== "authenticated") {
       setError("Not authenticated");
       return null;
     }
@@ -34,5 +33,6 @@ export function useApi() {
     error,
     callApi,
     api,
+    isAuthenticated: status === "authenticated",
   };
 }

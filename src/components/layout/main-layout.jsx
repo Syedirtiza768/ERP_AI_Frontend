@@ -1,15 +1,15 @@
-// src/components/layout/main-layout.jsx - Modified
+// src/components/layout/main-layout.jsx - Simplify to use only NextAuth
 "use client";
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
-import { useAuth } from "@/lib/auth-context";
+import { useSession } from "next-auth/react";
 
 export function MainLayout({ children }) {
   const [isMounted, setIsMounted] = useState(false);
-  const { token } = useAuth();
+  const { status } = useSession();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -20,8 +20,6 @@ export function MainLayout({ children }) {
   if (!isMounted) return null;
   if (pathname === "/login") return <>{children}</>;
 
-  // Changed this line to allow rendering without token for initial load
-  // This prevents errors when NextAuth is still initializing
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {pathname !== "/login" && <Sidebar />}

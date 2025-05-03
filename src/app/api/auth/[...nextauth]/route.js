@@ -1,3 +1,4 @@
+// src/app/api/auth/[...nextauth]/route.js
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -59,9 +60,13 @@ export const authOptions = {
     signIn: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // Session configuration
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
 };
 
 const handler = NextAuth(authOptions);
 
-// ✅ Required for App Router
 export { handler as GET, handler as POST };
