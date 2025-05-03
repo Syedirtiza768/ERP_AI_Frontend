@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
 import { useSession } from "next-auth/react";
@@ -11,13 +11,37 @@ export function MainLayout({ children }) {
   const [isMounted, setIsMounted] = useState(false);
   const { status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Don't render the layout on the login page
-  if (!isMounted) return null;
+  // Handle authentication for protected routes
+  useEffect(() => {
+    if (isMounted && status === "unauthenticated") {
+      const protectedRoutes = [
+        "/dashboard",
+        "/users",
+        "/roles",
+        "/permissions",
+        "/audit-logs",
+      ];
+
+      const isProtected = protectedRoutes.some((route) =>
+        pathname.startsWith(route)
+      );
+
+      if (isProtected) {
+        router.push("/login");
+      }
+    }
+  }, [isMounted, status, pathname, router]);
+
+  // Don't render until auth is determined
+  if (!isMounted || status === "loading") return null;
+
+  // Special case for login page
   if (pathname === "/login") return <>{children}</>;
 
   return (
