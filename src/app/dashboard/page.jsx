@@ -1,11 +1,19 @@
-"use client"
+// src/app/dashboard/page.jsx
+"use client";
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { api } from "@/lib/api-service"
-import { Users, ShieldCheck, Key, ClipboardList } from "lucide-react"
-import { PageHeader } from "@/components/ui/page-header"
-import { Spinner } from "@/components/ui/spinner"
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { api } from "@/lib/api-service";
+import { Users, ShieldCheck, Key, ClipboardList } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -13,41 +21,71 @@ export default function DashboardPage() {
     roleCount: 0,
     permissionCount: 0,
     auditLogCount: 0,
-  })
-  const [isLoading, setIsLoading] = useState(true)
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // In a real app, you'd have an endpoint for this
-        // This is a simulation
-        const userCount = await api.get("/users/count")
-        const roleCount = await api.get("/roles/count")
-        const permissionCount = await api.get("/permissions/count")
-        const auditLogCount = await api.get("/audit-logs/count")
+        // Using try/catch for each call to ensure one failure doesn't stop the others
+        let userCount = { count: 0 };
+        let roleCount = { count: 0 };
+        let permissionCount = { count: 0 };
+        let auditLogCount = { count: 0 };
+
+        try {
+          userCount = await api.get("/users/count");
+        } catch (error) {
+          console.error("Failed to fetch user count:", error);
+        }
+
+        try {
+          roleCount = await api.get("/roles/count");
+        } catch (error) {
+          console.error("Failed to fetch role count:", error);
+        }
+
+        try {
+          permissionCount = await api.get("/permissions/count");
+        } catch (error) {
+          console.error("Failed to fetch permission count:", error);
+        }
+
+        try {
+          auditLogCount = await api.get("/audit-logs/count");
+        } catch (error) {
+          console.error("Failed to fetch audit log count:", error);
+        }
 
         setStats({
-          userCount: userCount.count,
-          roleCount: roleCount.count,
-          permissionCount: permissionCount.count,
-          auditLogCount: auditLogCount.count,
-        })
+          userCount: userCount.count || 0,
+          roleCount: roleCount.count || 0,
+          permissionCount: permissionCount.count || 0,
+          auditLogCount: auditLogCount.count || 0,
+        });
       } catch (error) {
-        console.error("Failed to fetch dashboard stats:", error)
-        // For demo purposes, set some sample data
+        console.error("Failed to fetch dashboard stats:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load statistics. Please try again later.",
+          variant: "destructive",
+        });
+
+        // Set sample data for demo purposes
         setStats({
           userCount: 24,
           roleCount: 5,
           permissionCount: 18,
           auditLogCount: 156,
-        })
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchStats()
-  }, [])
+    fetchStats();
+  }, [toast]);
 
   const statCards = [
     {
@@ -82,11 +120,14 @@ export default function DashboardPage() {
       color: "text-purple-500",
       bgColor: "bg-purple-100",
     },
-  ]
+  ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Dashboard" description="Overview of your system's key metrics and activities" />
+      <PageHeader
+        title="Dashboard"
+        description="Overview of your system's key metrics and activities"
+      />
 
       {isLoading ? (
         <div className="flex h-40 items-center justify-center">
@@ -98,14 +139,18 @@ export default function DashboardPage() {
             {statCards.map((card, index) => (
               <Card key={index}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    {card.title}
+                  </CardTitle>
                   <div className={`rounded-full p-2 ${card.bgColor}`}>
                     <card.icon className={`h-4 w-4 ${card.color}`} />
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{card.value}</div>
-                  <p className="text-xs text-muted-foreground">{card.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {card.description}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -121,17 +166,25 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   <div className="border-b pb-2">
                     <p className="font-medium">User Created</p>
-                    <p className="text-sm text-muted-foreground">New user account was created</p>
-                    <p className="text-xs text-muted-foreground">2 minutes ago</p>
+                    <p className="text-sm text-muted-foreground">
+                      New user account was created
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      2 minutes ago
+                    </p>
                   </div>
                   <div className="border-b pb-2">
                     <p className="font-medium">Permission Updated</p>
-                    <p className="text-sm text-muted-foreground">Permission "manage_users" was updated</p>
+                    <p className="text-sm text-muted-foreground">
+                      Permission "manage_users" was updated
+                    </p>
                     <p className="text-xs text-muted-foreground">1 hour ago</p>
                   </div>
                   <div>
                     <p className="font-medium">Role Assigned</p>
-                    <p className="text-sm text-muted-foreground">User assigned to "Admin" role</p>
+                    <p className="text-sm text-muted-foreground">
+                      User assigned to "Admin" role
+                    </p>
                     <p className="text-xs text-muted-foreground">3 hours ago</p>
                   </div>
                 </div>
@@ -148,7 +201,9 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">API Status</p>
-                      <p className="text-sm text-muted-foreground">All systems operational</p>
+                      <p className="text-sm text-muted-foreground">
+                        All systems operational
+                      </p>
                     </div>
                     <div className="flex h-3 w-3 items-center justify-center">
                       <div className="h-2 w-2 rounded-full bg-green-500" />
@@ -157,7 +212,9 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Database</p>
-                      <p className="text-sm text-muted-foreground">Connected and healthy</p>
+                      <p className="text-sm text-muted-foreground">
+                        Connected and healthy
+                      </p>
                     </div>
                     <div className="flex h-3 w-3 items-center justify-center">
                       <div className="h-2 w-2 rounded-full bg-green-500" />
@@ -166,7 +223,9 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Authentication Service</p>
-                      <p className="text-sm text-muted-foreground">Working normally</p>
+                      <p className="text-sm text-muted-foreground">
+                        Working normally
+                      </p>
                     </div>
                     <div className="flex h-3 w-3 items-center justify-center">
                       <div className="h-2 w-2 rounded-full bg-green-500" />
@@ -179,5 +238,5 @@ export default function DashboardPage() {
         </>
       )}
     </div>
-  )
+  );
 }

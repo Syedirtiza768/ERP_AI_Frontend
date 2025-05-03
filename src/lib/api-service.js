@@ -1,163 +1,349 @@
+// src/lib/api-service.js
 import { getSession } from "next-auth/react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// Match the port used in your backend main.ts file
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 class ApiService {
-  async fetchWithAuth(endpoint, options = {}) {
-    const session = await getSession();
-
-    if (!session?.accessToken) {
-      throw new Error("No access token available");
-    }
-
-    const defaultOptions = {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-    };
-
-    const mergedOptions = {
-      ...defaultOptions,
-      ...options,
-      headers: {
-        ...defaultOptions.headers,
-        ...options.headers,
-      },
-    };
-
-    let response = await fetch(`${API_URL}${endpoint}`, mergedOptions);
-
-    // If unauthorized, try to refresh the token
-    if (response.status === 401 && session.refreshToken) {
-      const refreshed = await this.refreshToken(
-        session.refreshToken,
-        session.user.id
-      );
-
-      if (refreshed) {
-        // Update the authorization header with new token
-        mergedOptions.headers.Authorization = `Bearer ${refreshed}`;
-
-        // Retry the request
-        response = await fetch(`${API_URL}${endpoint}`, mergedOptions);
+  // Basic HTTP methods
+  async get(endpoint, options = {}) {
+    try {
+      // Special handling for count endpoints that don't exist in backend
+      if (endpoint.endsWith("/count")) {
+        const resource = endpoint.split("/")[1].replace("/count", "");
+        return this.getCount(resource);
       }
-    }
 
-    return response;
+      const response = await this.fetchWithAuth(endpoint, {
+        method: "GET",
+        ...options,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`GET ${endpoint} failed:`, error);
+      throw error;
+    }
   }
 
+  // Method to handle count requests
+  async getCount(resource) {
+    try {
+      // For count endpoints, we'll get the list and return the count
+      const response = await this.fetchWithAuth(`/${resource}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        return { count: 0 };
+      }
+
+      const data = await response.json();
+
+      // Check if it's the audit logs endpoint which returns {data, total}
+      if (resource === "audit-logs" && data.total !== undefined) {
+        return { count: data.total };
+      }
+
+      // For normal arrays
+      return { count: Array.isArray(data) ? data.length : 0 };
+    } catch (error) {
+      console.error(`Count for ${resource} failed:`, error);
+      return { count: 0 };
+    }
+  }
+
+  async post(endpoint, data, options = {}) {
+    try {
+      const response = await this.fetchWithAuth(endpoint, {
+        method: "POST",
+        body: JSON.stringify(data),
+        ...options,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`POST ${endpoint} failed:`, error);
+      throw error;
+    }
+  }
+
+  async patch(endpoint, data, options = {}) {
+    try {
+      const response = await this.fetchWithAuth(endpoint, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+        ...options,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`PATCH ${endpoint} failed:`, error);
+      throw error;
+    }
+  }
+
+  async delete(endpoint, options = {}) {
+    try {
+      const response = await this.fetchWithAuth(endpoint, {
+        method: "DELETE",
+        ...options,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      // Handle 204 No Content response
+      if (response.status === 204) {
+        return true;
+      }
+
+      try {
+        return await response.json();
+      } catch (e) {
+        // If no JSON is returned, just return success
+        return true;
+      }
+    } catch (error) {
+      console.error(`DELETE ${endpoint} failed:`, error);
+      throw error;
+    }
+  }
+
+  // Helper for authentication and token refresh
+  async fetchWithAuth(endpoint, options = {}) {
+    try {
+      const session = await getSession();
+
+      let headers = {
+        "Content-Type": "application/json",
+      };
+
+      // Add authorization header if we have a token
+      if (session?.accessToken) {
+        headers.Authorization = `Bearer ${session.accessToken}`;
+      }
+
+      const mergedOptions = {
+        ...options,
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
+      };
+
+      let url = endpoint.startsWith("http")
+        ? endpoint
+        : `${API_URL}${endpoint}`;
+      let response = await fetch(url, mergedOptions);
+
+      // If unauthorized, try to refresh the token
+      if (response.status === 401 && session?.refreshToken) {
+        try {
+          const refreshResult = await this.refreshToken(
+            session.refreshToken,
+            session.user.id
+          );
+
+          if (refreshResult?.access_token) {
+            // Update the authorization header with new token
+            mergedOptions.headers.Authorization = `Bearer ${refreshResult.access_token}`;
+
+            // Retry the request
+            response = await fetch(url, mergedOptions);
+          }
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+          // Continue with the error response
+        }
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`Network error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // Token refresh helper
   async refreshToken(refreshToken, userId) {
     try {
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken, user_id: userId }),
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+          user_id: userId,
+        }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-
-        // Here you would update the session with the new token
-        // This is a simplified version - in practice,
-        // you might need to use a custom event or context
-        // to propagate the new token
-        return data.access_token;
+      if (!response.ok) {
+        throw new Error("Token refresh failed");
       }
 
-      return null;
+      return await response.json();
     } catch (error) {
-      console.error("Token refresh failed:", error);
-      return null;
+      console.error("Token refresh error:", error);
+      throw error;
     }
   }
 
-  // User methods
-  async getUsers() {
-    const response = await this.fetchWithAuth("/users");
-    if (!response.ok) throw new Error("Failed to fetch users");
+  // --- Specific API endpoints based on your NestJS backend ---
+
+  // Auth endpoints
+  async login(credentials) {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || "Invalid credentials");
+    }
+
     return response.json();
+  }
+
+  async logout() {
+    return this.post("/auth/logout");
+  }
+
+  async checkPermissions(permissions) {
+    return this.get(
+      `/auth/check-permissions?permissions=${permissions.join(",")}`
+    );
+  }
+
+  // User endpoints
+  async getUsers() {
+    return this.get("/users");
   }
 
   async getUser(id) {
-    const response = await this.fetchWithAuth(`/users/${id}`);
-    if (!response.ok) throw new Error(`Failed to fetch user ${id}`);
-    return response.json();
+    return this.get(`/users/${id}`);
+  }
+
+  async getUserProfile() {
+    return this.get("/users/profile");
   }
 
   async createUser(userData) {
-    const response = await this.fetchWithAuth("/users", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    });
-    if (!response.ok) throw new Error("Failed to create user");
-    return response.json();
+    return this.post("/users", userData);
   }
 
   async updateUser(id, userData) {
-    const response = await this.fetchWithAuth(`/users/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(userData),
-    });
-    if (!response.ok) throw new Error(`Failed to update user ${id}`);
-    return response.json();
+    return this.patch(`/users/${id}`, userData);
   }
 
   async deleteUser(id) {
-    const response = await this.fetchWithAuth(`/users/${id}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) throw new Error(`Failed to delete user ${id}`);
-    return true;
+    return this.delete(`/users/${id}`);
   }
 
-  // Role methods
+  // Role endpoints
   async getRoles() {
-    const response = await this.fetchWithAuth("/roles");
-    if (!response.ok) throw new Error("Failed to fetch roles");
-    return response.json();
+    return this.get("/roles");
   }
 
   async getRole(id) {
-    const response = await this.fetchWithAuth(`/roles/${id}`);
-    if (!response.ok) throw new Error(`Failed to fetch role ${id}`);
-    return response.json();
+    return this.get(`/roles/${id}`);
   }
 
   async createRole(roleData) {
-    const response = await this.fetchWithAuth("/roles", {
-      method: "POST",
-      body: JSON.stringify(roleData),
-    });
-    if (!response.ok) throw new Error("Failed to create role");
-    return response.json();
+    return this.post("/roles", roleData);
   }
 
-  // Permission methods
+  async updateRole(id, roleData) {
+    return this.patch(`/roles/${id}`, roleData);
+  }
+
+  async deleteRole(id) {
+    return this.delete(`/roles/${id}`);
+  }
+
+  // Permission endpoints
   async getPermissions() {
-    const response = await this.fetchWithAuth("/permissions");
-    if (!response.ok) throw new Error("Failed to fetch permissions");
-    return response.json();
+    return this.get("/permissions");
+  }
+
+  async getPermission(id) {
+    return this.get(`/permissions/${id}`);
+  }
+
+  async createPermission(permissionData) {
+    return this.post("/permissions", permissionData);
+  }
+
+  async updatePermission(id, permissionData) {
+    return this.patch(`/permissions/${id}`, permissionData);
+  }
+
+  async deletePermission(id) {
+    return this.delete(`/permissions/${id}`);
+  }
+
+  // User-Role endpoints
+  async getUserRoles(userId) {
+    return this.get(`/user-roles/user/${userId}`);
   }
 
   async assignRoleToUser(userId, roleId) {
-    const response = await this.fetchWithAuth("/user-roles", {
-      method: "POST",
-      body: JSON.stringify({ userId, roleId }),
-    });
-    if (!response.ok) throw new Error("Failed to assign role");
-    return response.json();
+    return this.post("/user-roles", { userId, roleId });
   }
 
   async removeRoleFromUser(userId, roleId) {
-    const response = await this.fetchWithAuth(
-      `/user-roles/user/${userId}/role/${roleId}`,
-      {
-        method: "DELETE",
-      }
+    return this.delete(`/user-roles/user/${userId}/role/${roleId}`);
+  }
+
+  // Role-Permission endpoints
+  async getPermissionsByRoleId(roleId) {
+    return this.get(`/role-permissions/role/${roleId}`);
+  }
+
+  async assignPermissionsToRole(roleId, permissionIds) {
+    return this.post("/role-permissions", {
+      roleId,
+      permissionIds,
+    });
+  }
+
+  async removePermissionFromRole(roleId, permissionId) {
+    return this.delete(
+      `/role-permissions/role/${roleId}/permission/${permissionId}`
     );
-    if (!response.ok) throw new Error("Failed to remove role");
-    return true;
+  }
+
+  // Audit logs endpoints
+  async getAuditLogs(page = 1, limit = 10) {
+    return this.get(`/audit-logs?page=${page}&limit=${limit}`);
+  }
+
+  async getAuditLogsByUser(userId, page = 1, limit = 10) {
+    return this.get(`/audit-logs/user/${userId}?page=${page}&limit=${limit}`);
+  }
+
+  async getAuditLogsByResource(resource, page = 1, limit = 10) {
+    return this.get(
+      `/audit-logs/resource/${resource}?page=${page}&limit=${limit}`
+    );
+  }
+
+  async getAuditLogsByAction(action, page = 1, limit = 10) {
+    return this.get(`/audit-logs/action/${action}?page=${page}&limit=${limit}`);
   }
 }
 
