@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { userService } from "@/lib";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/ui/page-header";
@@ -20,9 +20,14 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   const fetchUsers = async () => {
+    setIsLoading(true);
     try {
       const data = await userService.getAll();
-      setUsers(data);
+      const formattedData = data.map((user) => ({
+        ...user,
+        roles: Array.isArray(user.roles) ? user.roles : [],
+      }));
+      setUsers(formattedData);
     } catch (error) {
       console.error("Failed to fetch users:", error);
       toast({
@@ -30,7 +35,6 @@ export default function UsersPage() {
         description: "Failed to load users",
         variant: "destructive",
       });
-      // For demo purposes, set some sample data
       setUsers([
         {
           id: "1",
@@ -74,7 +78,6 @@ export default function UsersPage() {
         description: "The user has been deleted successfully.",
         variant: "success",
       });
-      // Refresh the user list
       fetchUsers();
     } catch (error) {
       console.error("Failed to delete user:", error);
@@ -100,11 +103,15 @@ export default function UsersPage() {
       title: "Roles",
       render: (user) => (
         <div className="flex flex-wrap gap-1">
-          {user.roles.map((role) => (
-            <Badge key={role} variant="outline">
-              {role}
-            </Badge>
-          ))}
+          {user.roles?.length > 0 ? (
+            user.roles.map((role, index) => (
+              <Badge key={index} variant="outline">
+                {typeof role === "string" ? role : role.name || "Unknown"}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-muted-foreground text-sm">No roles</span>
+          )}
         </div>
       ),
     },
@@ -120,13 +127,19 @@ export default function UsersPage() {
     {
       key: "createdAt",
       title: "Created At",
-      render: (user) => format(new Date(user.createdAt), "PPP"),
+      render: (user) => {
+        try {
+          return format(new Date(user.createdAt), "PPP");
+        } catch {
+          return "Invalid date";
+        }
+      },
     },
     {
       key: "actions",
       title: "Actions",
       render: (user) => (
-        <div className="flex space-x-2">
+        <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
           <Button
             variant="ghost"
             size="icon"
@@ -140,8 +153,9 @@ export default function UsersPage() {
           </Button>
           <ConfirmationDialog
             title="Delete User"
-            description="Are you sure you want to delete this user? This action cannot be undone."
+            description={`Are you sure you want to delete ${user.username}? This action cannot be undone.`}
             onConfirm={() => handleDeleteUser(user.id)}
+            triggerText=""
             variant="ghost"
             size="icon"
             icon={true}
@@ -174,6 +188,7 @@ export default function UsersPage() {
           columns={columns}
           searchField="username"
           onRowClick={(user) => router.push(`/users/${user.id}`)}
+          emptyMessage="No users found"
         />
       )}
     </div>
